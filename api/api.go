@@ -7,7 +7,6 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 	"strconv"
 
 	"cloud.google.com/go/firestore"
@@ -42,12 +41,8 @@ type application struct {
 }
 
 func createClient(ctx context.Context) *firestore.Client {
-	projectID, ok := os.LookupEnv(ENV_PROJECT_ID)
-	if !ok {
-		log.Fatalf("not found %s variable", ENV_PROJECT_ID)
-	}
 
-	client, err := firestore.NewClient(ctx, projectID)
+	client, err := firestore.NewClient(ctx, firestore.DetectProjectID)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
