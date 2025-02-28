@@ -10,7 +10,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		slog.Error("error ")
+		slog.Error("Error on execute code", "err", err)
 		os.Exit(1)
 	}
 	slog.Info("all systems offline")
@@ -26,6 +26,8 @@ func run() error {
 		Handler:      handler,
 		Addr:         ":8080",
 	}
+
+	slog.Info("Starting at port :8080")
 
 	if err := s.ListenAndServe(); err != nil {
 		return err

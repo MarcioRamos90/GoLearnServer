@@ -73,16 +73,6 @@ func HelloWorld(app application) http.HandlerFunc {
 		if err != nil {
 			log.Fatalf("Failed to iterate: %v", err)
 		}
-		// for {
-		// 	doc, err := iter.Next()
-		// 	if err == iterator.Done {
-		// 		break
-		// 	}
-		// 	if err != nil {
-		// 		log.Fatalf("Failed to iterate: %v", err)
-		// 	}
-		// 	fmt.Println(doc.Data())
-		// }
 
 		sendJSON(w, Response{Data: i.Data()}, http.StatusOK)
 	}
