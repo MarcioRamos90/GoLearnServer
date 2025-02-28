@@ -29,14 +29,14 @@ func HelloApi(app application) http.HandlerFunc {
 
 func GetData(app application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		level := extracIntegerQueryParam(w, r, "level")
+		level := extracIntegerFromQueryParam(w, r, "level")
 		q := app.FirestoreClient.Collection("subscriptions").Select().Where("level", "==", level)
 		i, err := q.Documents(r.Context()).GetAll()
 
 		if err != nil {
 			sendJSON(w, Response{Error: err.Error()}, http.StatusUnprocessableEntity)
+			return
 		}
-
 		sendJSON(w, Response{Data: i}, http.StatusOK)
 	}
 }
