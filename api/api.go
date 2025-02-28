@@ -55,12 +55,19 @@ func NewHandler() http.Handler {
 
 	app := application{Data: make(map[string]string), ClientService: clientFirestore, C: ctx}
 
-	h.Get("/api", HelloWorld(app))
+	h.Get("/api", GetData(app))
+	h.Get("/", HelloApi(app))
 
 	return h
 }
 
-func HelloWorld(app application) http.HandlerFunc {
+func HelloApi(app application) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sendJSON(w, Response{Data: "Hello API!"}, http.StatusOK)
+	}
+}
+
+func GetData(app application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := app.ClientService.Collection("subscriptions").Select().Where("level", "<", 2)
 
