@@ -3,9 +3,11 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"cloud.google.com/go/firestore"
 	"github.com/go-chi/chi/v5"
@@ -39,7 +41,11 @@ type application struct {
 }
 
 func createClient(ctx context.Context) *firestore.Client {
-	projectID := firestore.DetectProjectID
+	projectID, ok := os.LookupEnv(ENV_PROJECT_ID)
+	if !ok {
+		log.Fatalf("not found %s variable", ENV_PROJECT_ID)
+	}
+
 	client, err := firestore.NewClient(ctx, projectID)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
@@ -69,18 +75,21 @@ func HelloApi(app application) http.HandlerFunc {
 
 func GetData(app application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		q := app.ClientService.Collection("subscriptions").Select().Where("level", "<", 2)
+		q := app.ClientService.Collection("subscriptions").Select().Where("level", ">=", 2)
 
-		i, err := q.Documents(r.Context()).Next()
+		i, err := q.Documents(r.Context()).GetAll()
+		for _, s := range i {
 
-		if err == iterator.Done {
-			slog.Error("Failed to get itme", "error", err)
-			sendJSON(w, Response{Error: "not found"}, http.StatusNotFound)
+			if err == iterator.Done {
+				slog.Error("Failed to get itme", "error", err)
+				sendJSON(w, Response{Error: "not found"}, http.StatusNotFound)
+			}
+			if err != nil {
+				log.Fatalf("Failed to iterate: %v", err)
+			}
+			fmt.Println("--->", s.Data())
 		}
-		if err != nil {
-			log.Fatalf("Failed to iterate: %v", err)
-		}
 
-		sendJSON(w, Response{Data: i.Data()}, http.StatusOK)
+		sendJSON(w, Response{Data: i}, http.StatusOK)
 	}
 }
