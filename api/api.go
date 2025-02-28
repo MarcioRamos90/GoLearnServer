@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -11,7 +10,6 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/go-chi/chi/v5"
-	"google.golang.org/api/iterator"
 )
 
 type Response struct {
@@ -75,28 +73,16 @@ func GetData(app application) http.HandlerFunc {
 		if levelStr == "" {
 			levelStr = "0" // default value
 		}
-
 		level, err := strconv.ParseInt(levelStr, 10, 64)
-		fmt.Println("level", level)
+
 		if err != nil {
 			slog.Error("Error to parse param", "error", err)
 			sendJSON(w, Response{Error: "the param needs to be numeric"}, http.StatusBadRequest)
 		}
 
 		q := app.ClientService.Collection("subscriptions").Select().Where("level", "==", level)
-		i, err := q.Documents(r.Context()).GetAll()
-		for _, s := range i {
+		i, err := q.Documents(r.Context()).Next()
 
-			if err == iterator.Done {
-				slog.Error("Failed to get itme", "error", err)
-				sendJSON(w, Response{Error: "not found"}, http.StatusNotFound)
-			}
-			if err != nil {
-				log.Fatalf("Failed to iterate: %v", err)
-			}
-			fmt.Println("--->", s.Data())
-		}
-
-		sendJSON(w, Response{Data: i}, http.StatusOK)
+		sendJSON(w, Response{Data: i.Exists()}, http.StatusOK)
 	}
 }
