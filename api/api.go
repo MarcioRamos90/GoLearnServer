@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 
 	"cloud.google.com/go/firestore"
 	"github.com/go-chi/chi/v5"
@@ -75,8 +76,19 @@ func HelloApi(app application) http.HandlerFunc {
 
 func GetData(app application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		q := app.ClientService.Collection("subscriptions").Select().Where("level", ">=", 2)
+		levelStr := r.URL.Query().Get("level")
+		if levelStr == "" {
+			levelStr = "0" // default value
+		}
 
+		level, err := strconv.ParseInt(levelStr, 10, 64)
+		fmt.Println("level", level)
+		if err != nil {
+			slog.Error("Error to parse param", "error", err)
+			sendJSON(w, Response{Error: "the param needs to be numeric"}, http.StatusBadRequest)
+		}
+
+		q := app.ClientService.Collection("subscriptions").Select().Where("level", "==", level)
 		i, err := q.Documents(r.Context()).GetAll()
 		for _, s := range i {
 
