@@ -1,3 +1,4 @@
 package api
 
-const ENV_PROJECT_ID = "_AR_PROJECT_ID"
+const X_RAPIDAPI_KEY = "_X_RAPIDAPI_KEY"
+const X_RAPIDAPI_HOST = "_X_RAPIDAPI_HOST"

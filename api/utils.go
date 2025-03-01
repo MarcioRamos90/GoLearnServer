@@ -37,7 +37,7 @@ func createClient(ctx context.Context) *firestore.Client {
 func extracIntegerFromQueryParam(w http.ResponseWriter, r *http.Request, key string) int {
 	queryParamStr := r.URL.Query().Get(key)
 	if queryParamStr == "" {
-		queryParamStr = "0" // default value
+		queryParamStr = "0"
 	}
 	queryParam, err := strconv.ParseInt(queryParamStr, 10, 64)
 
