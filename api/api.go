@@ -2,8 +2,10 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -21,6 +23,8 @@ func NewHandler() http.Handler {
 	h.Get("/", HelloApi(app))
 	h.Get("/api", GetData(app))
 	h.Get("/api/languages", GetLanguage(app))
+
+	h.Post("/api/wishlist", PostWishList(app))
 
 	return h
 }
@@ -64,5 +68,43 @@ func GetLanguage(app application) http.HandlerFunc {
 		body, _ := io.ReadAll(res.Body)
 
 		sendJSON(w, Response{Data: string(body)}, http.StatusOK)
+	}
+}
+
+func PostWishList(app application) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var wishListSubscription WishListSubscription
+		if err := json.NewDecoder(r.Body).Decode(&wishListSubscription); err != nil {
+			slog.Error("error on body decode", "error", err)
+			sendJSON(w, Response{Error: "something went wrong"}, http.StatusInternalServerError)
+			return
+		}
+
+		if wishListSubscription.Email == "" {
+			sendJSON(w, Response{Error: "please send email"}, http.StatusBadRequest)
+			return
+		}
+
+		subsRef := app.FirestoreClient.Collection("subscriptions")
+
+		// verify if email already exists
+		query := subsRef.Select().Where("Email", "==", wishListSubscription.Email)
+		doc, _ := query.Documents(r.Context()).Next()
+
+		if doc != nil && doc.Exists() {
+			sendJSON(w, Response{Error: "this email already exists on our registration"}, http.StatusOK)
+			return
+		}
+
+		// send to firestore
+		_, _, err := subsRef.Add(r.Context(), wishListSubscription)
+
+		if err != nil {
+			slog.Error("error on saving email", "error", err)
+			sendJSON(w, Response{Error: "error on saving email"}, http.StatusBadRequest)
+			return
+		}
+
+		sendJSON(w, Response{Data: "subscribed"}, http.StatusCreated)
 	}
 }

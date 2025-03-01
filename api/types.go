@@ -11,3 +11,7 @@ type application struct {
 	Data            map[string]string
 	FirestoreClient *firestore.Client
 }
+
+type WishListSubscription struct {
+	Email string `json:"email"`
+}
