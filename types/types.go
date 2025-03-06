@@ -1,4 +1,4 @@
-package api
+package types
 
 import "cloud.google.com/go/firestore"
 
@@ -7,9 +7,14 @@ type Response struct {
 	Data  any    `json:"data,omitempty"`
 }
 
-type application struct {
-	Data            map[string]string
+type Envs struct {
+	Rapid_host string
+	Rapid_key  string
+}
+
+type Application struct {
 	FirestoreClient *firestore.Client
+	Envs            Envs
 }
 
 type WishListSubscription struct {

@@ -3,85 +3,55 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"server/types"
 
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
 func NewHandler() http.Handler {
-	h := chi.NewMux()
 
 	ctx := context.Background()
 	clientFirestore := createClient(ctx)
+	app := types.Application{Envs: types.Envs{}, FirestoreClient: clientFirestore}
 
-	app := application{Data: make(map[string]string), FirestoreClient: clientFirestore}
+	api := chi.NewMux()
+	api.Use(middleware.Recoverer)
+	api.Use(middleware.RequestID)
+	api.Use(middleware.Logger)
+	api.Get("/", HelloApi(app))
+	api.Route("/api", func(r chi.Router) {
+		app.Envs.Rapid_host = os.Getenv(X_RAPIDAPI_HOST)
+		app.Envs.Rapid_key = os.Getenv(X_RAPIDAPI_KEY)
+		r.Get("/languages", GetLanguage(app))
+		r.Post("/submit", PostSubmitCode(app))
+		r.Get("/submit/{submitionId}", GetSubmitionCode(app))
+		r.Post("/wishlist", PostWishList(app))
+	})
 
-	h.Get("/", HelloApi(app))
-	h.Get("/api", GetData(app))
-	h.Get("/api/languages", GetLanguage(app))
-
-	h.Post("/api/wishlist", PostWishList(app))
-
-	return h
+	return api
 }
 
-func HelloApi(app application) http.HandlerFunc {
+func HelloApi(app types.Application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		sendJSON(w, Response{Data: "Hello API!"}, http.StatusOK)
+		SendJSON(w, types.Response{Data: "Hello API!"}, http.StatusOK)
 	}
 }
 
-func GetData(app application) http.HandlerFunc {
+func PostWishList(app types.Application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		level := extracIntegerFromQueryParam(w, r, "level")
-		q := app.FirestoreClient.Collection("subscriptions").Select().Where("level", "==", level)
-		i, err := q.Documents(r.Context()).GetAll()
-
-		if err != nil {
-			sendJSON(w, Response{Error: err.Error()}, http.StatusUnprocessableEntity)
-			return
-		}
-		sendJSON(w, Response{Data: i}, http.StatusOK)
-	}
-}
-
-func GetLanguage(app application) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		rapid_host := os.Getenv(X_RAPIDAPI_HOST)
-		rapid_key := os.Getenv(X_RAPIDAPI_KEY)
-
-		url := fmt.Sprintf("https://%s/languages", rapid_host)
-
-		req, _ := http.NewRequest("GET", url, nil)
-
-		req.Header.Add("x-rapidapi-key", rapid_key)
-		req.Header.Add("x-rapidapi-host", rapid_host)
-
-		res, _ := http.DefaultClient.Do(req)
-
-		defer res.Body.Close()
-		body, _ := io.ReadAll(res.Body)
-
-		sendJSON(w, Response{Data: string(body)}, http.StatusOK)
-	}
-}
-
-func PostWishList(app application) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var wishListSubscription WishListSubscription
+		var wishListSubscription types.WishListSubscription
 		if err := json.NewDecoder(r.Body).Decode(&wishListSubscription); err != nil {
 			slog.Error("error on body decode", "error", err)
-			sendJSON(w, Response{Error: "something went wrong"}, http.StatusInternalServerError)
+			SendJSON(w, types.Response{Error: "something went wrong"}, http.StatusInternalServerError)
 			return
 		}
 
 		if wishListSubscription.Email == "" {
-			sendJSON(w, Response{Error: "please send email"}, http.StatusBadRequest)
+			SendJSON(w, types.Response{Error: "please send email"}, http.StatusBadRequest)
 			return
 		}
 
@@ -92,7 +62,7 @@ func PostWishList(app application) http.HandlerFunc {
 		doc, _ := query.Documents(r.Context()).Next()
 
 		if doc != nil && doc.Exists() {
-			sendJSON(w, Response{Error: "this email already exists on our registration"}, http.StatusOK)
+			SendJSON(w, types.Response{Error: "this email already exists on our registration"}, http.StatusOK)
 			return
 		}
 
@@ -101,10 +71,10 @@ func PostWishList(app application) http.HandlerFunc {
 
 		if err != nil {
 			slog.Error("error on saving email", "error", err)
-			sendJSON(w, Response{Error: "error on saving email"}, http.StatusBadRequest)
+			SendJSON(w, types.Response{Error: "error on saving email"}, http.StatusBadRequest)
 			return
 		}
 
-		sendJSON(w, Response{Data: "subscribed"}, http.StatusCreated)
+		SendJSON(w, types.Response{Data: "subscribed"}, http.StatusCreated)
 	}
 }

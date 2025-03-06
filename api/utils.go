@@ -6,12 +6,13 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"server/types"
 	"strconv"
 
 	"cloud.google.com/go/firestore"
 )
 
-func sendJSON(w http.ResponseWriter, resp Response, status int) {
+func SendJSON(w http.ResponseWriter, resp types.Response, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	data, err := json.Marshal(resp)
 	if err != nil {
@@ -43,7 +44,7 @@ func extracIntegerFromQueryParam(w http.ResponseWriter, r *http.Request, key str
 
 	if err != nil {
 		slog.Error("Error to parse param", "error", err)
-		sendJSON(w, Response{Error: "the param needs to be numeric"}, http.StatusBadRequest)
+		SendJSON(w, types.Response{Error: "the param needs to be numeric"}, http.StatusBadRequest)
 	}
 	return int(queryParam)
 }
